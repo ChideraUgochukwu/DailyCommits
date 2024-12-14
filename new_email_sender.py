@@ -150,3 +150,35 @@ class EmailSender:
         except Exception as e:
             self.log_error(f"Error sending email: {str(e)}")
             return False
+
+    def email_loop(self):
+        """Main email sending loop"""
+        while not self.should_stop:
+            current_time = time.time()
+
+            if(self.last_email_time is None or current_time - self.last_email_time >= self.check_interval):
+                
+                if os.path.exists(self.to_send_file):
+                    self.send_email()
+
+            time.sleep(60)
+    
+    def start(self):
+        """Start the email sender thread"""
+        if self.email_thread is None or not self.email_thread.is_alive():
+            self.should_stop = False
+            self.email_thread = threading.Thread(target=self.email_loop, daemon=True)
+            self.email_thread.start()
+
+    def stop(self):
+        """Stop the email sender thread"""
+        self.should_stop = True
+        if self.email_thread:
+            self.email_thread.join(timeout=1)
+
+    def log_error(self, error_msg):
+        """Log errors to the error log file"""
+        error_file = os.path.join(self.log_dir, "error.log")
+        try:
+            with open(error_file, "a", encoding="utf-8") as f:
+                f.write(f"{datetime.now}")
